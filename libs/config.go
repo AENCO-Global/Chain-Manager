@@ -1,15 +1,11 @@
-package main
-
-// DONE: Get the block height from the mongo db if it exists
-package main
+package libs
 
 import (
-"github.com/shomali11/util/xstrings"
-"os"
-"os/user"
-"path/filepath"
-"strconv"
-"strings"
+    "os"
+    "os/user"
+    "path/filepath"
+    "strconv"
+    "strings"
 )
 
 type Config struct {
@@ -24,64 +20,6 @@ type Config struct {
     Database string
     DBName string
     log string
-    mongoDB [2]int      // to manage database retry resting cycles
-}
-
-type Payload struct {
-    Seq     int64   `json:"seq"`
-    ID      string  `json:"id"`
-    Name    string  `json:"name"`
-    Network string  `json:"network"`
-    Port    string  `json:"port"`
-    Lat     string  `json:"lat"`
-    Long    string  `json:"long"`
-    Block   int64   `json:"block"`
-    Role    string  `json:"role"`
-    Ip      string  `json:"ip"`
-    Version string  `json:"version"`
-    Debug   bool    `json:"debug"`
-    Status  string  `json:"status"`
-}
-
-func getGlobals() Config {
-    config := Config{
-        getHome(),
-        getRoot(),
-        getPingServer(),    // "monitor.aencoin.io"
-        getPingPort(),        // :80  (Include the Colon)
-        getPingPath(),        // "/api/index.php"  // /post  (Include the leading Slash
-        getDataPath(),
-        getHeartBeat(),
-        getAgentVersion(),
-        getDB(),
-        getDBName(),
-        getLog() ,
-        [2]int{5,5} }    // retry Rest, right side used to count up and retry again
-    log.Info("Configuration Details:",config)
-    return config
-}
-
-func loadConfigs() Payload {
-    defer func() { //Catch errors, and resume
-        r := recover()
-        if r != nil { log.Error("Expected Error:", r) }
-    }()
-    getGeo()
-    data := Payload{
-        0,
-        getID(),
-        getName(),
-        getNetwork(),
-        getPort(),
-        getLat(),
-        getLong(),
-        getBlockHeight(),  // This function is in the library due to be used in poatping
-        getRole(),
-        getPublicIp(),
-        getVersion(),
-        getDebug(),
-        "Agent:"+conf.Version  }
-    return data
 }
 
 
@@ -178,65 +116,6 @@ func getLog() string  {
         retVal = strings.Replace(retVal,"~", getHome(), -1 )
     }
     return retVal
-}
-
-// -----------------------------------------------------------------------
-//    _____      _                  _____            _                 _
-//   |  __ \    (_)                |  __ \          | |               | |
-//   | |__) | __ _ _ __ ___   ___  | |__) |_ _ _   _| | ___   __ _  __| |
-//   |  ___/ '__| | '_ ` _ \ / _ \ |  ___/ _` | | | | |/ _ \ / _` |/ _` |
-//   | |   | |  | | | | | | |  __/ | |  | (_| | |_| | | (_) | (_| | (_| |
-//   |_|   |_|  |_|_| |_| |_|\___| |_|   \__,_|\__, |_|\___/ \__,_|\__,_|
-//                                              __/ |
-//                                             |___/
-func getID() (getID string) {
-    if params.ID == "" {
-        getID = getAnything("config-agent.ini", "account", "id")
-    } else {
-        getID = params.ID
-        log.Info("Over riding Configuration ID with:    ",getID)
-    }
-    return
-}
-
-func getName() (getName string) {
-    if params.Name == "" {
-        getName = getAnything("config-node.properties", "localnode", "friendlyName")
-    } else {
-        getName = params.Name
-    }
-    return
-}
-
-func getNetwork() string {
-    return getAnything("config-network.properties", "network", "identifier")
-}
-
-func getPort() string{
-    return getAnything("config-node.properties", "node", "port")
-}
-
-func getLat() (getLat string) {
-    if xstrings.IsNotEmpty(params.Lat) {
-        getLat = params.Lat
-    } else {
-        getLat = getAnything("config-agent.ini", "report", "lat")
-    }
-    return
-}
-
-func getLong() (getLong string) {
-    if xstrings.IsNotEmpty(params.Long) {
-        getLong = params.Long
-    } else {
-        getLong = getAnything("config-agent.ini", "report", "lon")
-    }
-    return
-}
-
-func getRole() string {
-
-    return getAnything("config-node.properties", "localnode", "roles")
 }
 
 func getVersion() string  {

@@ -1,11 +1,8 @@
-package main
-
-
+package libs
 
 import (
     "encoding/json"
-    "github.com/globalsign/mgo"
-    "github.com/globalsign/mgo/bson"
+    "github.com/op/go-logging"
     "github.com/go-ini/ini"
     "io/ioutil"
     "math/rand"
@@ -14,6 +11,8 @@ import (
     "strings"
     "time"
 )
+
+var log = logging.MustGetLogger("aen.manager")
 
 /* --------------------------------------------------------------------------------
 #     _____      _     ____  _            _      _    _      _       _     _
@@ -26,36 +25,32 @@ import (
 #                                                              |___/
     This function needs a better way to get the block height, for now nem2-cli
    --------------------------------------------------------------------------------*/
-type Blocks struct {
-    Id          bson.ObjectId `json:"id" bson:"_id,omitempty"`
-    Height      int64 `json:"height"`
-}
-
-func getBlockHeight()  int64 {
-    var height Blocks
-    if conf.mongoDB[0] == conf.mongoDB[1] {
-        defer func() { //Catch errors, and resume
-            r := recover()
-            if r != nil {
-                log.Error("Database Access problem:", r)
-            } } ()
-        session, err := mgo.Dial(conf.Database)
-        if err != nil {
-            conf.mongoDB[1] = 0
-            panic(err)
-        }
-        defer session.Close()
-        err = session.DB(conf.DBName).C("chainInfo").Find(nil).One(&height)
-        if err != nil {
-            conf.mongoDB[1] = 0
-            log.Warning("No DB Space when trying to get height")
-            panic(err)
-        }
-    } else {
-        log.Warning("Skipping Database connection, will retry in [",conf.mongoDB,"] cycles!")
-        conf.mongoDB[1]++
-    }
-    return height.Height
+func getBlockHeight()   ( getBlockHeight int64) {
+    //var height Blocks
+    //if conf.mongoDB[0] == conf.mongoDB[1] {
+    //    defer func() { //Catch errors, and resume
+    //        r := recover()
+    //        if r != nil {
+    //            log.Error("Database Access problem:", r)
+    //        } } ()
+    //    session, err := mgo.Dial(conf.Database)
+    //    if err != nil {
+    //        conf.mongoDB[1] = 0
+    //        panic(err)
+    //    }
+    //    defer session.Close()
+    //    err = session.DB(conf.DBName).C("chainInfo").Find(nil).One(&height)
+    //    if err != nil {
+    //        conf.mongoDB[1] = 0
+    //        log.Warning("No DB Space when trying to get height")
+    //        panic(err)
+    //    }
+    //} else {
+    //    log.Warning("Skipping Database connection, will retry in [",conf.mongoDB,"] cycles!")
+    //    conf.mongoDB[1]++
+    //}
+        getBlockHeight = 0
+    return
 }
 
 // -------------------------------------------------------------------
@@ -92,7 +87,7 @@ func getAnything(file string ,section string, key string) string{
 //                                           __/ |                   __/ |
 //                                          |___/                   |___/
 func saveAnything(file string ,section string, key string, value string) bool{
-    cfgFile := conf.Root+"/resources/"+file
+    cfgFile := conf.Root+"/"+file
     defer func() { //Catch errors, and resume
         r := recover()
         if r != nil {
