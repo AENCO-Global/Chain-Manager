@@ -11,7 +11,7 @@ type Params struct {
     Name    string
 }
 
-func getParams() (getParams Params) {
+func GetParams() (getParams Params) {
     //var latPtr = flag.String("lat", "", "Latitude")
     //var lonPtr = flag.String("lon", "", "Longitude")
     //var idPtr =  flag.String("id", "", "Force the Node ID")

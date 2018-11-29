@@ -1,14 +1,10 @@
 package libs
 
 import (
-    "encoding/json"
-    "github.com/op/go-logging"
     "github.com/go-ini/ini"
-    "io/ioutil"
+    "github.com/op/go-logging"
     "math/rand"
-    "net/http"
     "os"
-    "strings"
     "time"
 )
 
@@ -77,86 +73,6 @@ func getAnything(file string ,section string, key string) string{
     return retVal
 }
 
-// ------------------------------------------------------------------------
-//     _____                                      _   _     _
-//    / ____|                   /\               | | | |   (_)
-//   | (___   __ ___   _____   /  \   _ __  _   _| |_| |__  _ _ __   __ _
-//    \___ \ / _` \ \ / / _ \ / /\ \ | '_ \| | | | __| '_ \| | '_ \ / _` |
-//    ____) | (_| |\ V /  __// ____ \| | | | |_| | |_| | | | | | | | (_| |
-//   |_____/ \__,_| \_/ \___/_/    \_\_| |_|\__, |\__|_| |_|_|_| |_|\__, |
-//                                           __/ |                   __/ |
-//                                          |___/                   |___/
-func saveAnything(file string ,section string, key string, value string) bool{
-    cfgFile := conf.Root+"/"+file
-    defer func() { //Catch errors, and resume
-        r := recover()
-        if r != nil {
-            log.Error("Unable to save values (Possibly unable to find or write file:", r)
-        } } ()
-    cfg, err := ini.Load(cfgFile )
-    cfg.Section(section).Key(key).SetValue(value)
-    if err != nil {
-        panic(err)
-    }
-    err = cfg.SaveTo(cfgFile)
-    if err != nil {
-        panic(err)
-    }
-    return true
-}
-
-
-
-// ------------------------------------
-//     _____ ______ ____ _____ _____
-//    / ____|  ____/ __ \_   _|  __ \
-//   | |  __| |__ | |  | || | | |__) |
-//   | | |_ |  __|| |  | || | |  ___/
-//   | |__| | |___| |__| || |_| |
-//    \_____|______\____/_____|_|
-func getGeo() {
-    defer func() {
-        r := recover()
-        if r != nil { log.Error("GEO Details Denied", r) }
-    }()
-    type Geo struct {
-        IP      string `json:"ip"`
-        City    string `json:"city"`
-        Region  string `json:"region"`
-        Country string `json:"country"`
-        Loc     string `json:"loc"`
-        Org     string `json:"org"`
-    }
-    transport := &http.Transport{DisableKeepAlives: true}
-    client := http.Client{Transport: transport}
-    resp, err := client.Get("http://ipinfo.io")
-    if err != nil {
-        panic(err)
-    } else {
-        responseData, err := ioutil.ReadAll(resp.Body)
-        if err != nil {
-            log.Error("Response contains Errors:")
-            panic(err)
-        } else {
-            bytes := []byte(responseData)
-            var inGeo Geo
-            err := json.Unmarshal(bytes, &inGeo)
-            if err != nil {
-                panic(err)
-            }
-            latLon := strings.Split(inGeo.Loc, ",")
-
-            saveAnything("config-agent.ini", "report", "city", inGeo.City)
-            saveAnything("config-agent.ini", "report", "country", inGeo.Country)
-            saveAnything("config-agent.ini", "report", "region", inGeo.Region)
-            saveAnything("config-agent.ini", "report", "lat",  latLon[0] )
-            saveAnything("config-agent.ini", "report", "lon", latLon[1])
-            saveAnything("config-agent.ini", "report", "publicIp", inGeo.IP)
-
-        }
-        defer resp.Body.Close()
-    }
-}
 
 // --------------------------------------------------
 //    ___  _  _            ___       _      _

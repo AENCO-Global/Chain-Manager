@@ -11,17 +11,26 @@ import (
 type Config struct {
     Home string
     Root string
-    Server string
-    Port string
-    Path string
-    Data string
-    Heartbeat int
     Version string
-    Database string
-    DBName string
     log string
+    Heartbeat int
+    PublicIP string
+    ConfigFile string
+    Debug bool
 }
 
+func GetConfig() (GetConfig Config) {
+    GetConfig = Config{
+              getHome(),
+              getRoot(),
+              getManVersion(),
+              getLog(),
+              getHeartBeat(),
+              getPublicIp(),
+              "manager-config.ini",
+              getDebug() }
+    return
+}
 
 // ------------------------------------------------------------------------
 //     _____             __ _                       _   _
@@ -41,43 +50,23 @@ func getHome() string {
 }
 
 func getRoot() (getRoot string) {
-    // Root is 1 up from this file that should be in the bin.
-    absPath,err := filepath.Abs("../resources/config-agent.ini"); if err != nil {panic(err) }
-    ex, err := os.Executable() ; if err != nil {panic(err) }
-    if exists(absPath) {
-        getRoot, err = filepath.Abs("../") ; if err != nil {panic(err) }
-    } else if exists(getHome() + "/.aen/resources/config-agent.ini") {
-        getRoot = getHome() + "/.aen"
-    } else if exists(filepath.Dir(ex)+"/resources/config-agent.ini") {
+    defer func() { //Catch errors, and resume
+        r := recover()
+        if r != nil {
+            log.Error("Unable to Find manager-config.ini file; err", r, " Setting Default values!")
+    } } ()
+    ex, err := os.Executable() ; if err != nil { panic(err) }
+    if exists(filepath.Dir(ex)+"/"+Config{}.ConfigFile ) {
         getRoot = filepath.Dir(ex)
     } else {
-        log.Critical("Unable to Find resources files")
-        getRoot = ""
+        log.Critical("Unable to Find manager-config.ini file")
+        getRoot = filepath.Dir(ex)
     }
-
-    return
-}
-
-
-func getPingServer() string {
-    return getAnything("config-agent.ini", "basic", "pingServer")
-}
-
-func getPingPort() string {
-    return ":"+getAnything("config-agent.ini", "basic", "pingPort")
-}
-
-func getPingPath() string {
-    return getAnything("config-agent.ini", "basic", "pingPath")
-}
-
-func getDataPath() (getDataPath string){
-    getDataPath = getRoot() + strings.Replace( getAnything("config-user.properties", "storage", "dataDirectory") , "../" , "/",1)
     return
 }
 
 func getHeartBeat() (getHeartBeat int){
-    heartBeat := getAnything("config-agent.ini", "basic", "heartBeat")
+    heartBeat := getAnything(Config{}.ConfigFile, "basic", "heartBeat")
     getHeartBeat, err := strconv.Atoi( heartBeat )
     if err != nil {
         log.Warning("Heartbeat not found, using Default: 45 ", err)
@@ -88,28 +77,12 @@ func getHeartBeat() (getHeartBeat int){
     return
 }
 
-func getAgentVersion() string  {
-    return getAnything("config-agent.ini", "basic", "version")
-}
-
-func getDB() (getDB string)  {
-    getDB = getAnything("config-database.properties", "database", "databaseUri")
-    if len(getDB) < 1 { //Set the default if the ini is wrong
-        getDB = "mongodb://localhost:27017"
-    }
-    return
-}
-
-func getDBName() string  {
-    retVal := getAnything("config-database.properties", "database", "databaseName")
-    if len(retVal) < 1 { //Set the default if the ini is wrong
-        retVal = "aen"
-    }
-    return retVal
+func getManVersion() string  {
+    return getAnything(Config{}.ConfigFile, "basic", "version")
 }
 
 func getLog() string  {
-    retVal := getAnything("config-agent.ini", "basic", "log")
+    retVal := getAnything(Config{}.ConfigFile, "basic", "log")
     if len(retVal) < 1 { //Set the default if the ini is wrong
         retVal = getRoot()+"/logs/agent.log"
     } else if strings.Index(retVal, "~") > -1 {
@@ -118,16 +91,12 @@ func getLog() string  {
     return retVal
 }
 
-func getVersion() string  {
-    return getAnything("config-node.properties", "localnode", "version")
-}
-
 func getPublicIp() string {
-    return getAnything("config-agent.ini", "report", "publicIp")
+    return getAnything(Config{}.ConfigFile, "report", "publicIp")
 }
 
 func getDebug() bool {
-    debugVal := getAnything("config-agent.ini", "basic", "debug")
+    debugVal := getAnything(Config{}.ConfigFile, "basic", "debug")
     if debugVal == "" {
         debugVal = "False"
     }
