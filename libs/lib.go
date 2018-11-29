@@ -59,7 +59,7 @@ func getBlockHeight()   ( getBlockHeight int64) {
 //                                      __/ |                   __/ |
 //                                     |___/                   |___/
 func getAnything(file string ,section string, key string) string{
-    cfgFile := getRoot() + "/resources/" + file
+    cfgFile := getRoot() + "/" + file
     defer func() { //Catch errors, and resume
         r := recover()
         if r != nil {
