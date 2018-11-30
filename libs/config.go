@@ -1,35 +1,37 @@
 package libs
 
 import (
-    "os"
-    "os/user"
-    "path/filepath"
-    "strconv"
-    "strings"
+	"flag"
+	"os"
+	"os/user"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type Config struct {
-    Home string
-    Root string
-    Version string
-    log string
-    Heartbeat int
-    PublicIP string
-    ConfigFile string
-    Debug bool
+	Home      string
+	Root      string
+	Version   string
+	log       string
+	Heartbeat int
+	PublicIP  string
+	Debug     bool
 }
 
+var params = GetParams()
+
 func GetConfig() (GetConfig Config) {
-    GetConfig = Config{
-              getHome(),
-              getRoot(),
-              getManVersion(),
-              getLog(),
-              getHeartBeat(),
-              getPublicIp(),
-              "manager-config.ini",
-              getDebug() }
-    return
+
+	GetConfig = Config{
+		getHome(),
+		getRoot(),
+		getManVersion(),
+		getLog(),
+		getHeartBeat(),
+		getPublicIp(),
+		getDebug()}
+	return
 }
 
 // ------------------------------------------------------------------------
@@ -42,67 +44,86 @@ func GetConfig() (GetConfig Config) {
 //                             __/ |
 //                            |___/
 func getHome() string {
-    usr, err := user.Current()
-    if err != nil {
-        log.Fatal( err )
-    }
-    return usr.HomeDir
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return usr.HomeDir
 }
 
+// Get the working folder the the application is running in
 func getRoot() (getRoot string) {
-    defer func() { //Catch errors, and resume
-        r := recover()
-        if r != nil {
-            log.Error("Unable to Find manager-config.ini file; err", r, " Setting Default values!")
-    } } ()
-    ex, err := os.Executable() ; if err != nil { panic(err) }
-    if exists(filepath.Dir(ex)+"/"+Config{}.ConfigFile ) {
-        getRoot = filepath.Dir(ex)
-    } else {
-        log.Critical("Unable to Find manager-config.ini file")
-        getRoot = filepath.Dir(ex)
-    }
-    return
+	defer func() { //Catch errors, and resume
+		r := recover()
+		if r != nil {
+			log.Error("Unable to Find config file; err", r, " Setting Default values!")
+		}
+	}()
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	if !exists(filepath.Dir(ex) + "/" + params.Config) {
+		log.Error("Unable to Find :", filepath.Dir(ex)+"/"+params.Config)
+	}
+	getRoot = filepath.Dir(ex)
+	return
 }
 
-func getHeartBeat() (getHeartBeat int){
-    heartBeat := getAnything(Config{}.ConfigFile, "basic", "heartBeat")
-    getHeartBeat, err := strconv.Atoi( heartBeat )
-    if err != nil {
-        log.Warning("Heartbeat not found, using Default: 45 ", err)
-        getHeartBeat,_  = strconv.Atoi("45")
-    }
-    getHeartBeat = randomRange(getHeartBeat/2 ,getHeartBeat*2)
-    log.Info("Heart Beat: " , getHeartBeat)
-    return
+func getHeartBeat() (getHeartBeat int) {
+	heartBeat := getSettings("basic", "heartBeat")
+	getHeartBeat, err := strconv.Atoi(heartBeat)
+	if err != nil {
+		log.Warning("Heartbeat not found, using Default: 45 ", err)
+		getHeartBeat, _ = strconv.Atoi("45")
+	}
+	getHeartBeat = randomRange(getHeartBeat/2, getHeartBeat*2)
+	log.Info("Heart Beat: ", getHeartBeat)
+	return
 }
 
-func getManVersion() string  {
-    return getAnything(Config{}.ConfigFile, "basic", "version")
+func getManVersion() string {
+	return getSettings("basic", "version")
 }
 
-func getLog() string  {
-    retVal := getAnything(Config{}.ConfigFile, "basic", "log")
-    if len(retVal) < 1 { //Set the default if the ini is wrong
-        retVal = getRoot()+"/logs/agent.log"
-    } else if strings.Index(retVal, "~") > -1 {
-        retVal = strings.Replace(retVal,"~", getHome(), -1 )
-    }
-    return retVal
+func getLog() string {
+	retVal := getSettings("basic", "log")
+	if len(retVal) < 1 { //Set the default if the ini is wrong
+		retVal = getRoot() + "/logs/agent.log"
+	} else if strings.Index(retVal, "~") > -1 {
+		retVal = strings.Replace(retVal, "~", getHome(), -1)
+	}
+	return retVal
 }
 
 func getPublicIp() string {
-    return getAnything(Config{}.ConfigFile, "report", "publicIp")
+	return getSettings("report", "publicIp")
 }
 
 func getDebug() bool {
-    debugVal := getAnything(Config{}.ConfigFile, "basic", "debug")
-    if debugVal == "" {
-        debugVal = "False"
-    }
-    retVal , err := strconv.ParseBool(debugVal)
-    if err != nil {
-        log.Error("Can not Convert debug:",err)
-    }
-    return retVal
+	debugVal := getSettings("basic", "debug")
+	if debugVal == "" {
+		debugVal = "False"
+	}
+	retVal, err := strconv.ParseBool(debugVal)
+	if err != nil {
+		log.Error("Can not Convert debug:", err)
+	}
+	return retVal
+}
+
+type Params struct {
+	Config    string
+	Heartbeat int
+}
+
+func GetParams() (getParams Params) {
+	var ConfigFile = flag.String("c", "manager-config.ini", "Path and filename to configuration file")
+	var Heartbeat = flag.Int("h", 60, "Heartbeat of the system to cycle events")
+	flag.Parse()
+
+	getParams = Params{
+		*ConfigFile,
+		*Heartbeat}
+	return
 }
